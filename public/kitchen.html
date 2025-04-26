@@ -2,17 +2,13 @@
 <html lang="hr">
 <head>
   <meta charset="UTF-8">
-  <title>Kuhinja – Narudžbe</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <script defer src="kitchen.js"></script>
-  <style>
-    body { font-family: sans-serif; margin: 2em; }
-    h1 { color: #333; }
-    .order { border: 1px solid #ccc; padding: 1em; margin-bottom: 1em; border-radius: 8px; }
-  </style>
+  <title>Kitchen</title>
+  <link rel="stylesheet" href="kitchen.css">
 </head>
 <body>
-  <h1>Primljene narudžbe</h1>
+  <h1>Kitchen - Current orders</h1>
   <div id="orders"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="kitchen.js"></script>
 </body>
 </html>

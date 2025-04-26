@@ -1,0 +1,59 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #FFEFDB;
+  padding: 20px;
+}
+
+.order-card {
+  border-radius: 12px;
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  transition: background-color 0.3s ease;
+}
+
+.order-card:hover {
+  transform: scale(1.01);
+}
+
+.progress-container {
+  background-color: #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 8px;
+  margin-top: 10px;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: #8cb369;
+  transition: width 0.5s linear;
+}
+
+button {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border: none;
+  background-color: #d9534f;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #c9302c;
+}
+
+.shrink {
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+
+.empty-message {
+  text-align: center;
+  font-size: 1.2em;
+  color: #666;
+  margin-top: 50px;
+}

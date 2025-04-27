@@ -104,10 +104,28 @@ function startNextOrder() {
       progressBar.style.width = `${order.progress}%`;
     }
 
-    if (elapsed < totalDurationMs) {
+    // if (elapsed < totalDurationMs) {
+    //   requestAnimationFrame(updateProgress);
+    // } else {
+    //   order.status = 'ready';
+    //   renderOrders();
+    //   startNextOrder();
+    // }
+
+    // A pri emitiranju događaja:
+    if (elapsed <= totalDurationMs) {
       requestAnimationFrame(updateProgress);
     } else {
       order.status = 'ready';
+      
+      console.log(`Emitting status change for order #${order.orderID} to 'ready'`);
+      // Obavijesti server o promjeni statusa
+      socket.emit('orderStatusChanged', {
+        orderID: order.orderID,
+        status: 'ready'
+      });
+      console.log('Status change emission completed');
+      
       renderOrders();
       startNextOrder();
     }

@@ -31,17 +31,98 @@ const dbConfig = {
   },
 };
 
-// REST API ruta
+// Cache za lokalno praćenje statusa narudžbi (za brže odgovore)
+const orderStatusCache = new Map();
+
+// Socket.io event handling - pomičemo izvan rute
+io.on('connection', (socket) => {
+  console.log('Client connected\n');
+
+  // Slušamo promjene statusa narudžbi iz kuhinje
+  socket.on('orderStatusChanged', async (data) => {
+    console.log(`Received status update for order #${data.orderID}: ${data.status}`);
+    
+    try {
+      // Ažuriraj status u bazi podataka
+      const pool = await sql.connect(dbConfig);
+      await pool.request()
+        .input('orderID', sql.Int, data.orderID)
+        .input('status', sql.VarChar(20), data.status)
+        .query('UPDATE customerOrder SET status = @status WHERE orderID = @orderID');
+      
+      // Ažuriraj lokalni cache
+      orderStatusCache.set(data.orderID, data.status);
+      
+      console.log(`Updated order #${data.orderID} status to ${data.status}\n`);
+    } catch (err) {
+      console.error('Error updating order status:', err, '\n');
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected\n');
+  });
+});
+
+// GET endpoint za provjeru statusa narudžbe
+app.get('/orderStatus/:id', async (req, res) => {
+  const orderID = parseInt(req.params.id);
+  
+  if (isNaN(orderID)) {
+    return res.status(400).json({ error: 'Invalid order ID' });
+  }
+  
+  console.log(`GET request for order status #${orderID}`);
+  console.log(`Cache contains: ${Array.from(orderStatusCache.keys()).join(', ')}`);
+  
+  try {
+    // Prvo provjerimo cache
+    if (orderStatusCache.has(orderID)) {
+      console.log(`Found in cache: Order #${orderID} status: ${orderStatusCache.get(orderID)}\n`);
+      return res.json({ 
+        orderID, 
+        status: orderStatusCache.get(orderID) 
+      });
+    }
+    
+    // Ako nije u cacheu, dohvati iz baze
+    console.log(`Not in cache, querying database for order #${orderID}`);
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .input('orderID', sql.Int, orderID)
+      .query('SELECT status FROM customerOrder WHERE orderID = @orderID');
+    
+    if (result.recordset.length === 0) {
+      console.log(`Order #${orderID} not found in database\n`);
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    const status = result.recordset[0].status;
+    console.log(`Database status for order #${orderID}: ${status}\n`);
+    
+    // Spremi u cache za buduće upite
+    orderStatusCache.set(orderID, status);
+    
+    return res.json({ orderID, status });
+  } catch (err) {
+    console.error('Error fetching order status:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// REST API ruta za kreiranje nove narudžbe
 app.post('/order', async (req, res) => {
   const order = req.body;
   const { customer, meals = [], drinks = [], notes = '' } = order;
 
   // Turning given meal/drink names to lowercase
-  for (meal of meals)
+  for (const meal of meals) {
     meal.name = meal.name.toLowerCase();
+  }
 
-  for (drink of meals)
+  for (const drink of drinks) {  // Ispravljeno iz 'meals' u 'drinks'
     drink.name = drink.name.toLowerCase();
+  }
 
   if (!customer || (meals.length === 0 && drinks.length === 0)) {
     return res.status(400).json({ status: 'DENIED', reason: 'Missing customer or items.' });
@@ -55,7 +136,7 @@ app.post('/order', async (req, res) => {
     const drinkNames = drinks.map(d => `'${d.name}'`).join(',');
 
     console.log("Ordered meals: ", mealNames);
-    console.log("Ordered drinks: ", drinkNames);
+    console.log("Ordered drinks: ", drinkNames, "\n");
 
     const mealQuery = meals.length > 0
       ? await pool.request().query(`SELECT * FROM meal WHERE LOWER(mealName) IN (${mealNames})`)
@@ -76,7 +157,7 @@ app.post('/order', async (req, res) => {
     const orderItems = [];
 
     for (const meal of meals) {
-      const dbMeal = mealQuery.recordset.find(m => m.mealName === meal.name);
+      const dbMeal = mealQuery.recordset.find(m => m.mealName.toLowerCase() === meal.name.toLowerCase());
       const quantity = meal.quantity;
       const subtotal = quantity * parseFloat(dbMeal.price);
       totalAmount += subtotal;
@@ -92,7 +173,7 @@ app.post('/order', async (req, res) => {
     }
 
     for (const drink of drinks) {
-      const dbDrink = drinkQuery.recordset.find(d => d.drinkName === drink.name);
+      const dbDrink = drinkQuery.recordset.find(d => d.drinkName.toLowerCase() === drink.name.toLowerCase());
       const quantity = drink.quantity;
       const subtotal = quantity * parseFloat(dbDrink.price);
       totalAmount += subtotal;
@@ -131,7 +212,6 @@ app.post('/order', async (req, res) => {
     const orderID = insertOrderResult.recordset[0].orderID;
 
     // Unesi orderItems
-
     for (const item of orderItems) {
       await pool.request()
         .input('orderID', sql.Int, orderID)
@@ -150,12 +230,17 @@ app.post('/order', async (req, res) => {
     // Izračunaj totalPrepTime
     let maxPrepTime = 0;
     for (const meal of meals) {
-      const dbMeal = mealQuery.recordset.find(m => m.mealName === meal.name);
-      const quantity = meal.quantity;
-      const prepTime = quantity * dbMeal.mealPreparationTimeMinutes;
-      if (prepTime > maxPrepTime)
-        maxPrepTime = prepTime;
+      const dbMeal = mealQuery.recordset.find(m => m.mealName.toLowerCase() === meal.name.toLowerCase());
+      if (dbMeal) {
+        const quantity = meal.quantity;
+        const prepTime = quantity * dbMeal.mealPreparationTimeMinutes;
+        if (prepTime > maxPrepTime)
+          maxPrepTime = prepTime;
+      }
     }
+
+    // Dodaj status u cache
+    orderStatusCache.set(orderID, 'pending');
 
     // Pošalji kuhinji novu narudžbu
     io.emit('newOrder', {
@@ -180,7 +265,7 @@ server.listen(PORT, async () => {
   try {
     await sql.connect(dbConfig);
     console.log('Povezano na SQL Server bazu.');
-    console.log(`Server pokrenut na http://localhost:${PORT}`);
+    console.log(`Server pokrenut na http://localhost:${PORT}\n`);
   } catch (err) {
     console.error('Greška prilikom spajanja na bazu:', err);
   }

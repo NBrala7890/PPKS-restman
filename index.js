@@ -31,14 +31,84 @@ const dbConfig = {
   },
 };
 
-// Cache za lokalno praćenje statusa narudžbi (za brže odgovore)
+// Cache za lokalno praćenje statusa narudžbi
 const orderStatusCache = new Map();
+const orderDetailsCache = new Map(); // Za spremanje detalja o narudžbama
 
-// Socket.io event handling - pomičemo izvan rute
+// Socket.io event handling
 io.on('connection', (socket) => {
   console.log('Client connected\n');
 
-  // Slušamo promjene statusa narudžbi iz kuhinje
+  // Slušamo zahtjev za dohvaćanje svih narudžbi sa statusom "ready"
+  socket.on('getReadyOrders', async () => {
+    try {
+      const pool = await sql.connect(dbConfig);
+      const result = await pool.request()
+        .query(`
+          SELECT co.*, 
+                 (SELECT STRING_AGG(CONCAT(m.mealName, ' (', oi.quantity, ')'), ', ') 
+                  FROM orderItem oi 
+                  JOIN meal m ON oi.itemID = m.mealID 
+                  WHERE oi.orderID = co.orderID AND oi.itemType = 'meal') as meals,
+                 (SELECT STRING_AGG(CONCAT(d.drinkName, ' (', oi.quantity, ')'), ', ') 
+                  FROM orderItem oi 
+                  JOIN drink d ON oi.itemID = d.drinkID 
+                  WHERE oi.orderID = co.orderID AND oi.itemType = 'drink') as drinks
+          FROM customerOrder co
+          WHERE co.status = 'ready'
+        `);
+
+      const readyOrders = result.recordset.map(order => {
+        // Pripremamo podatke u formatu koji očekuje front-end
+        const formattedOrder = {
+          orderID: order.orderID,
+          customer: order.customerName,
+          status: order.status,
+          totalAmount: order.totalAmount,
+          meals: [],
+          drinks: []
+        };
+
+        // Pretvaramo string meals i drinks u polje objekata
+        if (order.meals) {
+          const mealItems = order.meals.split(', ');
+          mealItems.forEach(item => {
+            const match = item.match(/(.*) \((\d+)\)$/);
+            if (match) {
+              formattedOrder.meals.push({
+                name: match[1],
+                quantity: parseInt(match[2])
+              });
+            }
+          });
+        }
+
+        if (order.drinks) {
+          const drinkItems = order.drinks.split(', ');
+          drinkItems.forEach(item => {
+            const match = item.match(/(.*) \((\d+)\)$/);
+            if (match) {
+              formattedOrder.drinks.push({
+                name: match[1],
+                quantity: parseInt(match[2])
+              });
+            }
+          });
+        }
+
+        // Spremamo u cache za buduće upite
+        orderDetailsCache.set(order.orderID, formattedOrder);
+
+        return formattedOrder;
+      });
+
+      socket.emit('allReadyOrders', readyOrders);
+    } catch (err) {
+      console.error('Error fetching ready orders:', err);
+    }
+  });
+
+  // Slušamo promjene statusa narudžbi
   socket.on('orderStatusChanged', async (data) => {
     console.log(`Received status update for order #${data.orderID}: ${data.status}`);
     
@@ -54,8 +124,80 @@ io.on('connection', (socket) => {
       orderStatusCache.set(data.orderID, data.status);
       
       console.log(`Updated order #${data.orderID} status to ${data.status}\n`);
+
+      // Ako je status postao "ready", pošalji obavijest delivery.js
+      if (data.status === 'ready') {
+        // Dohvati detalje narudžbe ako nisu u cacheu
+        let orderDetails = orderDetailsCache.get(data.orderID);
+        
+        if (!orderDetails) {
+          // Dohvati detalje narudžbe iz baze
+          const orderResult = await pool.request()
+            .input('orderID', sql.Int, data.orderID)
+            .query(`
+              SELECT co.*, 
+                     (SELECT STRING_AGG(CONCAT(m.mealName, ' (', oi.quantity, ')'), ', ') 
+                      FROM orderItem oi 
+                      JOIN meal m ON oi.itemID = m.mealID 
+                      WHERE oi.orderID = co.orderID AND oi.itemType = 'meal') as meals,
+                     (SELECT STRING_AGG(CONCAT(d.drinkName, ' (', oi.quantity, ')'), ', ') 
+                      FROM orderItem oi 
+                      JOIN drink d ON oi.itemID = d.drinkID 
+                      WHERE oi.orderID = co.orderID AND oi.itemType = 'drink') as drinks
+              FROM customerOrder co
+              WHERE co.orderID = @orderID
+            `);
+
+          if (orderResult.recordset.length > 0) {
+            const order = orderResult.recordset[0];
+            orderDetails = {
+              orderID: order.orderID,
+              customer: order.customerName,
+              status: order.status,
+              totalAmount: order.totalAmount,
+              meals: [],
+              drinks: []
+            };
+
+            // Pretvaramo string meals i drinks u polje objekata
+            if (order.meals) {
+              const mealItems = order.meals.split(', ');
+              mealItems.forEach(item => {
+                const match = item.match(/(.*) \((\d+)\)$/);
+                if (match) {
+                  orderDetails.meals.push({
+                    name: match[1],
+                    quantity: parseInt(match[2])
+                  });
+                }
+              });
+            }
+
+            if (order.drinks) {
+              const drinkItems = order.drinks.split(', ');
+              drinkItems.forEach(item => {
+                const match = item.match(/(.*) \((\d+)\)$/);
+                if (match) {
+                  orderDetails.drinks.push({
+                    name: match[1],
+                    quantity: parseInt(match[2])
+                  });
+                }
+              });
+            }
+
+            // Spremamo u cache
+            orderDetailsCache.set(data.orderID, orderDetails);
+          }
+        }
+
+        if (orderDetails) {
+          // Pošalji narudžbu delivery.js
+          io.emit('newReadyOrder', orderDetails);
+        }
+      }
     } catch (err) {
-      console.error('Error updating order status:', err, '\n');
+      console.error('Error updating order status:', err);
     }
   });
 
@@ -73,7 +215,6 @@ app.get('/orderStatus/:id', async (req, res) => {
   }
   
   console.log(`GET request for order status #${orderID}`);
-  console.log(`Cache contains: ${Array.from(orderStatusCache.keys()).join(', ')}`);
   
   try {
     // Prvo provjerimo cache
@@ -120,7 +261,7 @@ app.post('/order', async (req, res) => {
     meal.name = meal.name.toLowerCase();
   }
 
-  for (const drink of drinks) {  // Ispravljeno iz 'meals' u 'drinks'
+  for (const drink of drinks) {
     drink.name = drink.name.toLowerCase();
   }
 
@@ -242,8 +383,8 @@ app.post('/order', async (req, res) => {
     // Dodaj status u cache
     orderStatusCache.set(orderID, 'pending');
 
-    // Pošalji kuhinji novu narudžbu
-    io.emit('newOrder', {
+    // Spremi detalje narudžbe u cache
+    const orderDetails = {
       orderID,
       customer,
       meals,
@@ -251,7 +392,11 @@ app.post('/order', async (req, res) => {
       totalAmount,
       status: 'pending',
       totalPrepTime: maxPrepTime
-    });
+    };
+    orderDetailsCache.set(orderID, orderDetails);
+
+    // Pošalji kuhinji novu narudžbu
+    io.emit('newOrder', orderDetails);
 
     return res.status(200).json({ status: 'OK', orderID });
 

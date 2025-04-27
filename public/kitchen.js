@@ -124,7 +124,7 @@ function startNextOrder() {
         orderID: order.orderID,
         status: 'ready'
       });
-      console.log('Status change emission completed');
+      console.log('Status change emission completed\n');
       
       renderOrders();
       startNextOrder();

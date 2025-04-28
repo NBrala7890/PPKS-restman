@@ -85,37 +85,33 @@ function startNextOrder() {
   order.status = 'in progress';
   renderOrders();
 
-  const startTime = performance.now();
+  // Umjesto korištenja requestAnimationFrame, koristimo setInterval
+  // koji će se nastaviti izvršavati čak i kada tab nije aktivan
+  const startTime = Date.now();
   const totalDurationMs = order.totalPrepTime * 1000;
-
-  function updateProgress(timestamp) {
+  
+  // Postavljamo interval koji će redovito ažurirati napredak
+  const updateInterval = 100; // 100ms interval za glatku animaciju
+  const interval = setInterval(() => {
     if (!orders.includes(order)) {
       // Narudžba je možda uklonjena
+      clearInterval(interval);
       startNextOrder();
       return;
     }
 
-    const elapsed = timestamp - startTime;
+    const elapsed = Date.now() - startTime;
     order.progress = Math.min((elapsed / totalDurationMs) * 100, 100);
     
-    // Ažuriramo samo progress bar, ne cijeli prikaz
+    // Ažuriramo progress bar
     const progressBar = document.getElementById(`progress-${order.orderID}`);
     if (progressBar) {
       progressBar.style.width = `${order.progress}%`;
     }
 
-    // if (elapsed < totalDurationMs) {
-    //   requestAnimationFrame(updateProgress);
-    // } else {
-    //   order.status = 'ready';
-    //   renderOrders();
-    //   startNextOrder();
-    // }
-
-    // A pri emitiranju događaja:
-    if (elapsed <= totalDurationMs) {
-      requestAnimationFrame(updateProgress);
-    } else {
+    // Kad je narudžba dovršena, očistimo interval i nastavimo dalje
+    if (elapsed >= totalDurationMs) {
+      clearInterval(interval);
       order.status = 'ready';
       
       console.log(`Emitting status change for order #${order.orderID} to 'ready'`);
@@ -124,14 +120,12 @@ function startNextOrder() {
         orderID: order.orderID,
         status: 'ready'
       });
-      console.log('Status change emission completed\n');
+      console.log('Status change emission completed');
       
       renderOrders();
       startNextOrder();
     }
-  }
-
-  requestAnimationFrame(updateProgress);
+  }, updateInterval);
 }
 
 function removeOrder(orderID) {

@@ -220,10 +220,10 @@ app.get('/orderStatus/:id', async (req, res) => {
     // Prvo provjerimo cache
     if (orderStatusCache.has(orderID)) {
       console.log(`Found in cache: Order #${orderID} status: ${orderStatusCache.get(orderID)}\n`);
-      return res.json({ 
-        orderID, 
-        status: orderStatusCache.get(orderID) 
-      });
+      let orderDetails = orderDetailsCache.get(orderID);
+      orderDetails.status = orderStatusCache.get(orderID);
+      orderDetailsCache.set(orderID, orderDetails);
+      return res.json(orderDetails);
     }
     
     // Ako nije u cacheu, dohvati iz baze
@@ -231,7 +231,7 @@ app.get('/orderStatus/:id', async (req, res) => {
     const pool = await sql.connect(dbConfig);
     const result = await pool.request()
       .input('orderID', sql.Int, orderID)
-      .query('SELECT status FROM customerOrder WHERE orderID = @orderID');
+      .query('SELECT * FROM customerOrder WHERE orderID = @orderID');
     
     if (result.recordset.length === 0) {
       console.log(`Order #${orderID} not found in database\n`);
@@ -242,9 +242,11 @@ app.get('/orderStatus/:id', async (req, res) => {
     console.log(`Database status for order #${orderID}: ${status}\n`);
     
     // Spremi u cache za buduće upite
+    orderDetailsCache.set(orderID, result.recordset[0])
     orderStatusCache.set(orderID, status);
     
-    return res.json({ orderID, status });
+    // return res.json({ orderID, status });
+    return res.json(result.recordset[0]);
   } catch (err) {
     console.error('Error fetching order status:', err);
     return res.status(500).json({ error: 'Internal server error' });

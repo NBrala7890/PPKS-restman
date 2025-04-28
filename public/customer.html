@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Portal</title>
+  <link rel="stylesheet" href="customer.css">
+</head>
+<body>
+  <div class="container">
+    <div class="nav-bar">
+      <div class="nav-links">
+        <a href="index.html" class="home">Početna</a>
+      </div>
+      <h2 style="color: white; margin: 0;">Portal za kupce</h2>
+      <div style="width: 100px;"></div>
+    </div>
+    
+    <div class="tab-buttons">
+      <button class="tab-button active" onclick="openTab('order')">Nova narudžba</button>
+      <button class="tab-button" onclick="openTab('status')">Provjera statusa</button>
+    </div>
+    
+    <!-- Order Tab -->
+    <div id="order" class="tab-content active">
+      <div id="menu-view">
+        <div class="menu-container">
+          <div class="menu-section">
+            <div class="menu-title">
+              <h2>Jela</h2>
+            </div>
+            <div class="menu-items" id="meals-container">
+              <!-- Meals will be loaded here -->
+              <div class="menu-item-loading">Učitavanje...</div>
+            </div>
+          </div>
+          
+          <div class="menu-section">
+            <div class="menu-title">
+              <h2>Pića</h2>
+            </div>
+            <div class="menu-items" id="drinks-container">
+              <!-- Drinks will be loaded here -->
+              <div class="menu-item-loading">Učitavanje...</div>
+            </div>
+          </div>
+          
+          <div class="cart-section">
+            <h2>Vaša narudžba</h2>
+            <div class="cart-items" id="cart-items">
+              <div class="empty-cart">Vaša košarica je prazna</div>
+            </div>
+            
+            <div class="cart-summary">
+              <div class="cart-total">
+                <span>Ukupno:</span>
+                <span id="cart-total">0.00 €</span>
+              </div>
+              
+              <div class="customer-info">
+                <div class="form-group">
+                  <label for="customer-name">Vaše ime:</label>
+                  <input type="text" id="customer-name" placeholder="Unesite svoje ime">
+                </div>
+                
+                <div class="form-group">
+                  <label for="order-notes">Napomene (opcionalno):</label>
+                  <input type="text" id="order-notes" placeholder="Npr. bez luka, alergije...">
+                </div>
+              </div>
+              
+              <button id="checkout-btn" class="checkout-btn" disabled>Naruči</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="confirmation-view" class="confirmation">
+        <div class="confirmation-icon">✓</div>
+        <h2>Narudžba uspješno zaprimljena!</h2>
+        <p>Vaša narudžba je uspješno kreirana i poslana u kuhinju.</p>
+        <div class="order-number">Broj narudžbe: <span id="confirmation-order-id"></span></div>
+        <p>Možete provjeriti status vaše narudžbe u bilo kojem trenutku.</p>
+        <button class="back-to-menu" onclick="resetOrder()">Nova narudžba</button>
+      </div>
+    </div>
+    
+    <!-- Status Tab -->
+    <div id="status" class="tab-content">
+      <h1>Provjera statusa narudžbe</h1>
+      
+      <form class="status-form" id="status-form">
+        <div class="form-group">
+          <label for="order-id">Broj narudžbe:</label>
+          <input type="number" id="order-id" placeholder="Unesite broj narudžbe" required>
+        </div>
+        
+        <button type="submit" class="checkout-btn">Provjeri status</button>
+      </form>
+      
+      <div id="status-result" class="status-result">
+        <h2>Status narudžbe: <span id="status-text"></span></h2>
+        <p>Narudžba broj: <span id="status-order-id"></span></p>
+        <p>Kupac: <span id="status-customer"></span></p>
+        <p id="status-details"></p>
+      </div>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="customer.js"></script>
+</body>
+</html>

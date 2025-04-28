@@ -9,24 +9,51 @@
 <body>
   <div class="container">
     <div class="nav-bar">
-      <a href="index.html" class="home">Početna</a>
+      <div class="nav-links">
+        <a href="index.html" class="home">Početna</a>
+      </div>
+      <h2 style="color: white; margin: 0;">Portal za osoblje</h2>
+      <div style="width: 100px;"></div>
     </div>
     
-    <h1>Portal za osoblje</h1>
+    <div class="tab-buttons">
+      <button class="tab-button active" onclick="openTab('kitchen')">Kuhinja</button>
+      <button class="tab-button" onclick="openTab('delivery')">Dostava</button>
+    </div>
     
-    <div class="role-selection">
-      <div class="role-card" onclick="window.location.href='kitchen.html'">
-        <div class="role-icon">👨‍🍳</div>
-        <div class="role-title">Kuhinja</div>
-        <div class="role-description">Pregled i priprema narudžbi</div>
+    <!-- Kitchen Tab -->
+    <div id="kitchen" class="tab-content active">
+      <h2>Narudžbe za pripremu</h2>
+      
+      <div class="orders-container" id="kitchen-orders">
+        <!-- Kitchen orders will be loaded here -->
+        <div class="empty-message">Trenutno nema narudžbi za pripremu</div>
+      </div>
+    </div>
+    
+    <!-- Delivery Tab -->
+    <div id="delivery" class="tab-content">
+      <h2>Narudžbe za dostavu</h2>
+      
+      <!-- Drivers status section -->
+      <div class="drivers-container">
+        <div class="drivers-info">
+          <h3>Status dostavljača</h3>
+          <div class="drivers-progress-container">
+            <div class="drivers-progress-bar" id="drivers-progress"></div>
+          </div>
+          <p>Dostupni dostavljači: <span id="available-drivers">0</span> / <span id="total-drivers">0</span></p>
+        </div>
       </div>
       
-      <div class="role-card" onclick="window.location.href='delivery.html'">
-        <div class="role-icon">🚚</div>
-        <div class="role-title">Dostava</div>
-        <div class="role-description">Upravljanje dostavom</div>
+      <div class="orders-container" id="delivery-orders">
+        <!-- Delivery orders will be loaded here -->
+        <div class="empty-message">Trenutno nema narudžbi za dostavu</div>
       </div>
     </div>
   </div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="staff.js"></script>
 </body>
 </html>

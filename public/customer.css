@@ -164,6 +164,7 @@ h1, h2 {
 
 .add-btn {
   padding: 5px 10px;
+  margin-left: 5px;
   background-color: #8cb369;
   color: white;
   border: none;

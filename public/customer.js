@@ -230,13 +230,13 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
   
   // Prepare order data
   const orderData = {
-    customer: customerName,
+    customerName: customerName,
     meals: cart.meals.map(item => ({
-      mealID: item.id,
+      name: item.name,
       quantity: item.quantity
     })),
     drinks: cart.drinks.map(item => ({
-      drinkID: item.id,
+      name: item.name,
       quantity: item.quantity
     })),
     notes: notes
@@ -244,7 +244,7 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
   
   try {
     // Send order to server
-    const response = await fetch('/api/orders', {
+    const response = await fetch('http://localhost:3000/api/newOrder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -254,7 +254,7 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
     
     const result = await response.json();
     
-    if (result.status === 'success') {
+    if (result.status === 'OK') {
       // Show confirmation
       document.getElementById('menu-view').style.display = 'none';
       document.getElementById('confirmation-view').style.display = 'block';
@@ -307,10 +307,8 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
   
   try {
     // Fetch order status
-    const response = await fetch(`http://localhost:3000/orderStatus/${orderID}`);
+    const response = await fetch(`/api/orderStatus/${orderID}`);
     const data = await response.json();
-
-    console.log(data);
 
     // Doing this, so that the code goes to the catch block if there was an error
     let errorCheck = data.orderID;

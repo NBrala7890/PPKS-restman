@@ -62,7 +62,7 @@ io.on('connection', (socket) => {
         // Pripremamo podatke u formatu koji očekuje front-end
         const formattedOrder = {
           orderID: order.orderID,
-          customer: order.customerName,
+          customerName: order.customerName,
           status: order.status,
           totalAmount: order.totalAmount,
           meals: [],
@@ -152,7 +152,7 @@ io.on('connection', (socket) => {
             const order = orderResult.recordset[0];
             orderDetails = {
               orderID: order.orderID,
-              customer: order.customerName,
+              customerName: order.customerName,
               status: order.status,
               totalAmount: order.totalAmount,
               meals: [],
@@ -206,8 +206,48 @@ io.on('connection', (socket) => {
   });
 });
 
+// GET endpoint za dohvat hrane
+app.get('/api/meals', async (req, res) => {
+
+  console.log("Retreiving all the meals from the database...");
+
+  try {
+
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .query('SELECT * FROM meal');
+
+    return res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching meals:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+
+  
+
+});
+
+// GET endpoint za dohvat pića
+app.get('/api/drinks', async (req, res) => {
+
+  console.log("Retreiving all the drinks from the database...");
+
+  try {
+
+    const pool = await sql.connect(dbConfig);
+    const result = await pool.request()
+      .query('SELECT * FROM drink');
+
+    return res.json(result.recordset);
+  } catch (err) {
+    console.error('Error fetching drinks:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+
+});
+
 // GET endpoint za provjeru statusa narudžbe
-app.get('/orderStatus/:id', async (req, res) => {
+app.get('/api/orderStatus/:id', async (req, res) => {
   const orderID = parseInt(req.params.id);
   
   if (isNaN(orderID)) {
@@ -254,9 +294,9 @@ app.get('/orderStatus/:id', async (req, res) => {
 });
 
 // REST API ruta za kreiranje nove narudžbe
-app.post('/order', async (req, res) => {
+app.post('/api/newOrder', async (req, res) => {
   const order = req.body;
-  const { customer, meals = [], drinks = [], notes = '' } = order;
+  const { customerName, meals = [], drinks = [], notes = '' } = order;
 
   // Turning given meal/drink names to lowercase
   for (const meal of meals) {
@@ -267,8 +307,8 @@ app.post('/order', async (req, res) => {
     drink.name = drink.name.toLowerCase();
   }
 
-  if (!customer || (meals.length === 0 && drinks.length === 0)) {
-    return res.status(400).json({ status: 'DENIED', reason: 'Missing customer or items.' });
+  if (!customerName || (meals.length === 0 && drinks.length === 0)) {
+    return res.status(400).json({ status: 'DENIED', reason: 'Missing customerName or items.' });
   }
 
   try {
@@ -336,7 +376,7 @@ app.post('/order', async (req, res) => {
 
     // Kreiraj novu narudžbu
     const insertOrderResult = await pool.request()
-      .input('customerName', sql.VarChar(100), customer)
+      .input('customerName', sql.VarChar(100), customerName)
       .input('status', sql.VarChar(20), 'pending')
       .input('orderPreparationTimeMinutes', sql.Int, prepTime)
       .input('totalItems', sql.Int, totalItems)
@@ -388,7 +428,7 @@ app.post('/order', async (req, res) => {
     // Spremi detalje narudžbe u cache
     const orderDetails = {
       orderID,
-      customer,
+      customerName,
       meals,
       drinks,
       totalAmount,

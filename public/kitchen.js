@@ -37,7 +37,7 @@ function renderOrders() {
   
     card.innerHTML = `
       <h3>Narudžba #${order.orderID}</h3>
-      <p><strong>Kupac:</strong> ${order.customer}</p>
+      <p><strong>Kupac:</strong> ${order.customerName}</p>
       <p><strong>Status:</strong> ${order.status}</p>
       <p><strong>Ukupno:</strong> ${order.totalAmount.toFixed(2)} €</p>
       <p><strong>Meals:</strong> ${order.meals.map(m => `${m.name} (${m.quantity})`).join(', ')}</p>

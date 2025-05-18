@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Authentication</title>
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+  <div class="auth-container">
+    <h2>Pristup za osoblje</h2>
+    <p>Molimo unesite lozinku za pristup portalu za osoblje.</p>
+    
+    <form id="auth-form">
+      <div class="form-group">
+        <label for="password">Lozinka:</label>
+        <input type="password" id="password" placeholder="Unesite lozinku" required>
+      </div>
+      
+      <div id="error-message" class="error-message">
+        Neispravna lozinka. Molimo pokušajte ponovno.
+      </div>
+      
+      <div class="auth-buttons">
+        <button type="submit" class="login-btn">Prijava</button>
+        <button type="button" class="cancel-btn" onclick="window.location.href='index.html'">Odustani</button>
+      </div>
+    </form>
+  </div>
+  
+  <script src="auth.js"></script>
+</body>
+</html>

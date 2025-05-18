@@ -6,6 +6,10 @@ let isProcessingOrder = false;
 const MAX_DRIVERS = 5;
 let availableDrivers = 5;
 
+// Redirect to auth.html if user is not authenticated
+if (localStorage.getItem("isAuthenticated") !== "true")
+  window.location.href = "auth.html";
+
 document.addEventListener('DOMContentLoaded', function() {
   // Set up tab functionality
   window.openTab = function(tabName) {
@@ -403,7 +407,13 @@ function getStatusText(status) {
   }
 }
 
+function requireAuth() {
+    window.location.href = 'auth.html'
+}
+
 // Expose functions to window for the onclick attributes
 window.openTab = openTab;
 window.removeKitchenOrder = removeKitchenOrder;
 window.startDelivery = startDelivery;
+
+requireAuth();

@@ -28,6 +28,21 @@ INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPr
 INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
 	VALUES ('tomato soup', 'Creamy tomato soup with basil', 'lactose', 'Soup', 8, 5);
 
+INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
+	VALUES ('quattro stagioni', 'Pizza with ingredients representing all 4 seasons', 'lactose', 'Pizza', 7, 15);
+
+INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
+	VALUES ('napoletana', 'Pizza with tomato sauce and mozzarella cheese', 'lactose', 'Pizza', 9, 9);
+
+INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
+	VALUES ('ceasar salad', 'Green salad with romaine lettuce, croutons, Parmesan cheese, and Caesar dressing', 'lactose', 'Salad', 10, 13);
+
+INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
+	VALUES ('chicken nuggets', 'Chicken nuggets from chicken breast meat served with fries', NULL, 'Meat', 5, 11);
+
+INSERT INTO meal (mealName, mealDescription, mealAllergens, mealCategory, mealPreparationTimeMinutes, price)
+	VALUES ('clubhouse sandwich', 'Sliced cooked poultry, fried bacon, lettuce, tomato, and mayonnaise Creamy tomato soup with basil', 'lactose', 'Sandwich', 8, 15);
+
 select * from meal;
 
 CREATE TABLE drink(

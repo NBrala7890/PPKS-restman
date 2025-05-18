@@ -1,3 +1,6 @@
+// localStorage.setItem("isAuthenticated", "false");
+localStorage.removeItem("isAuthenticated");
+
 // Tab switching functionality
 function openTab(tabName) {
   // Hide all tab contents

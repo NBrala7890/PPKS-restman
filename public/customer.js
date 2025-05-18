@@ -36,6 +36,8 @@ let menuItems = {
   drinks: []
 };
 
+// Updates to customer.js for tooltip functionality
+
 // Fetch menu data when page loads
 window.addEventListener('DOMContentLoaded', async () => {
   try {
@@ -51,6 +53,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     // Render menu items
     renderMenu();
+
+    // Initialize tooltip positioning
+    initializeTooltips();
   } catch (error) {
     console.error('Error fetching menu:', error);
     document.getElementById('meals-container').innerHTML = '<div class="menu-item-error">Pogreška pri učitavanju jelovnika. Pokušajte osvježiti stranicu.</div>';
@@ -66,7 +71,26 @@ function renderMenu() {
   mealsContainer.innerHTML = menuItems.meals.map(meal => `
     <div class="menu-item" data-id="${meal.mealID}" data-type="meal">
       <div>
-        <div class="item-name">${meal.mealName}</div>
+        <div class="item-name">
+          ${meal.mealName}
+          <div class="info-icon" data-item-type="meal" data-item-id="${meal.mealID}">i
+            <div class="tooltip">
+              <div class="tooltip-title">${meal.mealName}</div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Opis:</span> ${meal.mealDescription || 'Nije dostupno'}
+              </div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Kategorija:</span> ${meal.mealCategory || 'Nije dostupno'}
+              </div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Alergeni:</span> ${meal.mealAllergens || 'Nema'}
+              </div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Vrijeme pripreme:</span> ${meal.mealPreparationTimeMinutes || '0'} min
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="item-price">${meal.price.toFixed(2)} €</div>
       </div>
       <div class="item-controls">
@@ -84,7 +108,23 @@ function renderMenu() {
   drinksContainer.innerHTML = menuItems.drinks.map(drink => `
     <div class="menu-item" data-id="${drink.drinkID}" data-type="drink">
       <div>
-        <div class="item-name">${drink.drinkName}</div>
+        <div class="item-name">
+          ${drink.drinkName}
+          <div class="info-icon" data-item-type="drink" data-item-id="${drink.drinkID}">i
+            <div class="tooltip">
+              <div class="tooltip-title">${drink.drinkName}</div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Opis:</span> ${drink.drinkDescription || 'Nije dostupno'}
+              </div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Kategorija:</span> ${drink.drinkCategory || 'Nije dostupno'}
+              </div>
+              <div class="tooltip-section">
+                <span class="tooltip-label">Volumen:</span> ${drink.drinkVolume || 'Nije dostupno'}
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="item-price">${drink.price.toFixed(2)} €</div>
       </div>
       <div class="item-controls">
@@ -98,6 +138,99 @@ function renderMenu() {
     </div>
   `).join('');
 }
+
+// Initialize tooltip positioning
+function initializeTooltips() {
+  // Add event listeners to ensure tooltips are always visible
+  document.querySelectorAll('.info-icon').forEach(infoIcon => {
+    infoIcon.addEventListener('mouseenter', adjustTooltipPosition);
+    infoIcon.addEventListener('mouseleave', hideTooltip);
+  });
+}
+
+// Hide tooltip when mouse leaves
+function hideTooltip(event) {
+  const tooltip = event.currentTarget.querySelector('.tooltip');
+  tooltip.style.visibility = 'hidden';
+  tooltip.style.opacity = '0';
+}
+
+// Adjust tooltip position to ensure it's fully visible
+function adjustTooltipPosition(event) {
+  const infoIcon = event.currentTarget;
+  const tooltip = infoIcon.querySelector('.tooltip');
+  const iconRect = infoIcon.getBoundingClientRect();
+  
+  // Remove all directional classes
+  tooltip.classList.remove('tooltip-top', 'tooltip-bottom', 'tooltip-left', 'tooltip-right');
+  
+  // Get window dimensions
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  // Default positioning - above the icon
+  let tooltipTop = iconRect.top - 10; // 10px above the icon
+  let tooltipLeft = iconRect.left + (iconRect.width / 2);
+  let placement = 'top';
+  
+  // Set tooltip initially visible and get its dimensions
+  tooltip.style.visibility = 'hidden';
+  tooltip.style.opacity = '0';
+  tooltip.style.left = '0';
+  tooltip.style.top = '0';
+  const tooltipWidth = tooltip.offsetWidth;
+  const tooltipHeight = tooltip.offsetHeight;
+  
+  // Check if tooltip would go off the top of the screen
+  if (tooltipTop - tooltipHeight < 0) {
+    // Place tooltip below the icon
+    tooltipTop = iconRect.bottom + 10;
+    placement = 'bottom';
+  } else {
+    // Place tooltip above the icon
+    tooltipTop = iconRect.top - tooltipHeight - 10;
+    placement = 'top';
+  }
+  
+  // Center horizontally by default
+  tooltipLeft = iconRect.left + (iconRect.width / 2) - (tooltipWidth / 2);
+  
+  // Check horizontal boundaries
+  if (tooltipLeft < 10) {
+    // Too close to left edge
+    tooltipLeft = 10;
+  } else if (tooltipLeft + tooltipWidth > windowWidth - 10) {
+    // Too close to right edge
+    tooltipLeft = windowWidth - tooltipWidth - 10;
+  }
+  
+  // Set tooltip direction class for arrow positioning
+  tooltip.classList.add(`tooltip-${placement}`);
+  
+  // Position the tooltip
+  tooltip.style.top = `${tooltipTop}px`;
+  tooltip.style.left = `${tooltipLeft}px`;
+  
+  // Make tooltip visible
+  tooltip.style.visibility = 'visible';
+  tooltip.style.opacity = '1';
+}
+
+// Make sure tooltips are properly positioned after DOM changes
+window.addEventListener('resize', () => {
+  // Hide all tooltips on resize to prevent positioning issues
+  document.querySelectorAll('.tooltip').forEach(tooltip => {
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.opacity = '0';
+  });
+});
+
+// Handle scroll events to reposition tooltips
+window.addEventListener('scroll', () => {
+  document.querySelectorAll('.info-icon:hover').forEach(icon => {
+    adjustTooltipPosition({ currentTarget: icon });
+  });
+}, { passive: true });
 
 function decreaseQuantity(button) {
   const quantityDisplay = button.nextElementSibling;

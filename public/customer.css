@@ -124,6 +124,8 @@ h1, h2 {
 
 .item-name {
   font-weight: bold;
+  display: flex;
+  align-items: center;
 }
 
 .item-price {
@@ -356,4 +358,101 @@ h1, h2 {
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
+}
+
+.info-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: #8cb369;
+  color: white;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 5px;
+  cursor: help;
+  position: relative;
+}
+
+.tooltip {
+  visibility: hidden;
+  position: fixed; /* Changed from absolute to fixed for better positioning */
+  background-color: #333;
+  color: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  z-index: 1000; /* Increased to ensure it's above everything */
+  width: 250px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 0.3s;
+  text-align: left;
+  /* Remove default positioning as we'll set this dynamically */
+  margin: 0;
+}
+
+/* Add arrow to tooltip */
+.tooltip::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-width: 5px;
+  border-style: solid;
+}
+
+.tooltip.tooltip-top::after {
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-color: #333 transparent transparent transparent;
+}
+
+.tooltip.tooltip-bottom::after {
+  bottom: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-color: transparent transparent #333 transparent;
+}
+
+.tooltip.tooltip-right::after {
+  top: 50%;
+  left: 0;
+  margin-top: -5px;
+  margin-left: -5px;
+  border-color: transparent #333 transparent transparent;
+}
+
+.tooltip.tooltip-left::after {
+  top: 50%;
+  right: 0;
+  margin-top: -5px;
+  margin-right: -5px;
+  border-color: transparent transparent transparent #333;
+}
+
+.info-icon:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tooltip-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  border-bottom: 1px solid #555;
+  padding-bottom: 3px;
+}
+
+.tooltip-section {
+  margin-top: 5px;
+}
+
+.tooltip-label {
+  font-weight: bold;
+  color: #8cb369;
 }

@@ -299,22 +299,22 @@ h1, h2 {
 }
 
 .status-result.pending {
-  background-color: #f4e285;
-  display: block;
-}
-
-.status-result.in-progress {
   background-color: #f4a259;
   display: block;
 }
 
+.status-result.in-progress {
+  background-color: #f4e285;
+  display: block;
+}
+
 .status-result.ready {
-  background-color: #5b8e7d;
+  background-color: #81c5f8;
   display: block;
 }
 
 .status-result.delivery {
-  background-color: #5b8e7d;
+  background-color: #2b8ed9;
   color: white;
   display: block;
 }

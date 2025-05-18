@@ -461,13 +461,13 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
     // Determine status text and class
     switch (data.status) {
         case 'pending':
-            statusText = 'U pripremi';
+            statusText = 'Čeka na pripremu';
             statusClass = 'pending';
             break;
-        // case 'in-progress':
-        //     statusText = 'U pripremi';
-        //     statusClass = 'in-progress';
-        //     break;
+        case 'in-progress':
+            statusText = 'U pripremi';
+            statusClass = 'in-progress';
+            break;
         case 'ready':
             statusText = 'Spremno za dostavu';
             statusClass = 'ready';
@@ -480,34 +480,14 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
             statusText = 'Dostavljeno';
             statusClass = 'completed';
             break;
-        // default:
-        //     statusText = data.order.status;
-        //     statusClass = 'pending';
+        default:
+            statusText = data.order.status;
+            statusClass = 'pending';
     }
 
     document.getElementById('status-text').textContent = statusText;
 
     document.getElementById('status-details').textContent = '';
-
-    // Display order details
-    // let detailsHTML = '<strong>Naručene stavke:</strong><br>';
-      
-    // if (data.order.meals && data.order.meals.length > 0) {
-    //   detailsHTML += 'Jela: ';
-    //   detailsHTML += data.order.meals.map(meal => 
-    //     `${meal.name} × ${meal.quantity}`
-    //   ).join(', ');
-    //   detailsHTML += '<br>';
-    // }
-    
-    // if (data.order.drinks && data.order.drinks.length > 0) {
-    //   detailsHTML += 'Pića: ';
-    //   detailsHTML += data.order.drinks.map(drink => 
-    //     `${drink.name} × ${drink.quantity}`
-    //   ).join(', ');
-    // }
-    
-    // document.getElementById('status-details').innerHTML = detailsHTML;
     
     // Add status class
     statusResult.classList.add(statusClass);
@@ -544,7 +524,7 @@ socket.on('orderStatusUpdate', (updatedOrder) => {
     // Determine status text and class
     switch (updatedOrder.status) {
       case 'pending':
-        statusText = 'U obradi';
+        statusText = 'Čeka na pripremu';
         statusClass = 'pending';
         break;
       case 'in-progress':

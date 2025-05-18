@@ -164,6 +164,11 @@ function startNextOrder() {
   currentPreparingIndex = nextIndex;
   const order = kitchenOrders[currentPreparingIndex];
   order.status = 'in progress';
+  // Notify server about status change
+  socket.emit('orderStatusChanged', {
+    orderID: order.orderID,
+    status: 'in-progress'
+  });
   renderKitchenOrders();
 
   // Use setInterval which continues to execute even when tab is not active

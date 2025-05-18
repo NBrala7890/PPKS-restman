@@ -42,6 +42,10 @@ body {
   background-color: #8cb369;
 }
 
+a.home:hover {
+  background-color: #7aa35a;
+}
+
 .tab-buttons {
   display: flex;
   margin-bottom: 20px;
@@ -240,7 +244,7 @@ h1, h2 {
 .checkout-btn {
   width: 100%;
   padding: 12px;
-  background-color: #e76f51;
+  background-color: #8cb369;
   color: white;
   border: none;
   border-radius: 8px;
@@ -251,7 +255,7 @@ h1, h2 {
 }
 
 .checkout-btn:hover {
-  background-color: #d65f41;
+  background-color: #7aa35a;
 }
 
 .checkout-btn:disabled {
@@ -305,7 +309,7 @@ h1, h2 {
 }
 
 .status-result.ready {
-  background-color: #8cb369;
+  background-color: #5b8e7d;
   display: block;
 }
 
@@ -322,7 +326,7 @@ h1, h2 {
 }
 
 .status-result.not-found {
-  background-color: #d9534f;
+  background-color: #e76f51;
   color: white;
   display: block;
 }

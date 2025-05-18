@@ -41,6 +41,10 @@ body {
   .nav-bar a.home {
     background-color: #8cb369;
   }
+
+  a.home:hover {
+  background-color: #7aa35a;
+}
   
   .tab-buttons {
     display: flex;

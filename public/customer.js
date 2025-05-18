@@ -360,7 +360,7 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
   const notes = document.getElementById('order-notes').value.trim();
   
   if (!customerName) {
-    alert('Molimo unesite svoje ime');
+    document.getElementById('customer-name-title').style.color = "#e76f51";
     return;
   }
   

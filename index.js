@@ -3,12 +3,13 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -16,20 +17,8 @@ app.use(express.json());
 // Posluži statičke datoteke iz 'public' mape
 app.use(express.static(path.join(__dirname, 'public')));
 
-// DB Configuration
-const sql = require('mssql');
-
-const dbConfig = {
-  user: 'sa',
-  password: 'posint',
-  server: 'localhost',
-  port: 1433,
-  database: 'PPKS-restman',
-  options: {
-    trustServerCertificate: true, // za lokalni rad bez certifikata
-    encrypt: false, // za lokalnu konekciju
-  },
-};
+// DB Configuration - PostgreSQL
+const pool = require('./db');
 
 // Cache za lokalno praćenje statusa narudžbi
 const orderStatusCache = new Map();
@@ -42,29 +31,27 @@ io.on('connection', (socket) => {
   // Slušamo zahtjev za dohvaćanje svih narudžbi sa statusom "ready"
   socket.on('getReadyOrders', async () => {
     try {
-      const pool = await sql.connect(dbConfig);
-      const result = await pool.request()
-        .query(`
-          SELECT co.*, 
-                 (SELECT STRING_AGG(CONCAT(m.mealName, ' (', oi.quantity, ')'), ', ') 
-                  FROM orderItem oi 
-                  JOIN meal m ON oi.itemID = m.mealID 
-                  WHERE oi.orderID = co.orderID AND oi.itemType = 'meal') as meals,
-                 (SELECT STRING_AGG(CONCAT(d.drinkName, ' (', oi.quantity, ')'), ', ') 
-                  FROM orderItem oi 
-                  JOIN drink d ON oi.itemID = d.drinkID 
-                  WHERE oi.orderID = co.orderID AND oi.itemType = 'drink') as drinks
-          FROM customerOrder co
-          WHERE co.status = 'ready'
-        `);
+      const result = await pool.query(`
+        SELECT co.*, 
+               (SELECT STRING_AGG(CONCAT(m.mealname, ' (', oi.quantity, ')'), ', ') 
+                FROM orderitem oi 
+                JOIN meal m ON oi.itemid = m.mealid 
+                WHERE oi.customerorderid = co.customerorderid AND oi.itemtype = 'meal') as meals,
+               (SELECT STRING_AGG(CONCAT(d.drinkname, ' (', oi.quantity, ')'), ', ') 
+                FROM orderitem oi 
+                JOIN drink d ON oi.itemid = d.drinkid 
+                WHERE oi.customerorderid = co.customerorderid AND oi.itemtype = 'drink') as drinks
+        FROM customerorder co
+        WHERE co.status = 'ready'
+      `);
 
-      const readyOrders = result.recordset.map(order => {
+      const readyOrders = result.rows.map(order => {
         // Pripremamo podatke u formatu koji očekuje front-end
         const formattedOrder = {
-          orderID: order.orderID,
-          customerName: order.customerName,
+          orderID: order.customerorderid,
+          customerName: order.customername,
           status: order.status,
-          totalAmount: order.totalAmount,
+          totalAmount: order.totalamount,
           meals: [],
           drinks: []
         };
@@ -97,7 +84,7 @@ io.on('connection', (socket) => {
         }
 
         // Spremamo u cache za buduće upite
-        orderDetailsCache.set(order.orderID, formattedOrder);
+        orderDetailsCache.set(order.customerorderid, formattedOrder);
 
         return formattedOrder;
       });
@@ -114,11 +101,7 @@ io.on('connection', (socket) => {
     
     try {
       // Ažuriraj status u bazi podataka
-      const pool = await sql.connect(dbConfig);
-      await pool.request()
-        .input('orderID', sql.Int, data.orderID)
-        .input('status', sql.VarChar(20), data.status)
-        .query('UPDATE customerOrder SET status = @status WHERE orderID = @orderID');
+      await pool.query('UPDATE customerorder SET status = $1 WHERE customerorderid = $2', [data.status, data.orderID]);
       
       // Ažuriraj lokalni cache
       orderStatusCache.set(data.orderID, data.status);
@@ -132,29 +115,27 @@ io.on('connection', (socket) => {
         
         if (!orderDetails) {
           // Dohvati detalje narudžbe iz baze
-          const orderResult = await pool.request()
-            .input('orderID', sql.Int, data.orderID)
-            .query(`
-              SELECT co.*, 
-                     (SELECT STRING_AGG(CONCAT(m.mealName, ' (', oi.quantity, ')'), ', ') 
-                      FROM orderItem oi 
-                      JOIN meal m ON oi.itemID = m.mealID 
-                      WHERE oi.orderID = co.orderID AND oi.itemType = 'meal') as meals,
-                     (SELECT STRING_AGG(CONCAT(d.drinkName, ' (', oi.quantity, ')'), ', ') 
-                      FROM orderItem oi 
-                      JOIN drink d ON oi.itemID = d.drinkID 
-                      WHERE oi.orderID = co.orderID AND oi.itemType = 'drink') as drinks
-              FROM customerOrder co
-              WHERE co.orderID = @orderID
-            `);
+          const orderResult = await pool.query(`
+            SELECT co.*, 
+                   (SELECT STRING_AGG(CONCAT(m.mealname, ' (', oi.quantity, ')'), ', ') 
+                    FROM orderitem oi 
+                    JOIN meal m ON oi.itemid = m.mealid 
+                    WHERE oi.customerorderid = co.customerorderid AND oi.itemtype = 'meal') as meals,
+                   (SELECT STRING_AGG(CONCAT(d.drinkname, ' (', oi.quantity, ')'), ', ') 
+                    FROM orderitem oi 
+                    JOIN drink d ON oi.itemid = d.drinkid 
+                    WHERE oi.customerorderid = co.customerorderid AND oi.itemtype = 'drink') as drinks
+            FROM customerorder co
+            WHERE co.customerorderid = $1
+          `, [data.orderID]);
 
-          if (orderResult.recordset.length > 0) {
-            const order = orderResult.recordset[0];
+          if (orderResult.rows.length > 0) {
+            const order = orderResult.rows[0];
             orderDetails = {
-              orderID: order.orderID,
-              customerName: order.customerName,
+              orderID: order.customerorderid,
+              customerName: order.customername,
               status: order.status,
-              totalAmount: order.totalAmount,
+              totalAmount: order.totalamount,
               meals: [],
               drinks: []
             };
@@ -208,42 +189,28 @@ io.on('connection', (socket) => {
 
 // GET endpoint za dohvat hrane
 app.get('/api/meals', async (req, res) => {
-
   console.log("Retreiving all the meals from the database...");
 
   try {
-
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .query('SELECT * FROM meal');
-
-    return res.json(result.recordset);
+    const result = await pool.query('SELECT * FROM meal');
+    return res.json(result.rows);
   } catch (err) {
     console.error('Error fetching meals:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-
-  
-
 });
 
 // GET endpoint za dohvat pića
 app.get('/api/drinks', async (req, res) => {
-
   console.log("Retreiving all the drinks from the database...");
 
   try {
-
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .query('SELECT * FROM drink');
-
-    return res.json(result.recordset);
+    const result = await pool.query('SELECT * FROM drink');
+    return res.json(result.rows);
   } catch (err) {
     console.error('Error fetching drinks:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-
 });
 
 // GET endpoint za provjeru statusa narudžbe
@@ -268,25 +235,28 @@ app.get('/api/orderStatus/:id', async (req, res) => {
     
     // Ako nije u cacheu, dohvati iz baze
     console.log(`Not in cache, querying database for order #${orderID}`);
-    const pool = await sql.connect(dbConfig);
-    const result = await pool.request()
-      .input('orderID', sql.Int, orderID)
-      .query('SELECT * FROM customerOrder WHERE orderID = @orderID');
+    const result = await pool.query('SELECT * FROM customerorder WHERE customerorderid = $1', [orderID]);
     
-    if (result.recordset.length === 0) {
+    if (result.rows.length === 0) {
       console.log(`Order #${orderID} not found in database\n`);
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    const status = result.recordset[0].status;
+    const order = result.rows[0];
+    const status = order.status;
     console.log(`Database status for order #${orderID}: ${status}\n`);
     
     // Spremi u cache za buduće upite
-    orderDetailsCache.set(orderID, result.recordset[0])
+    const orderDetails = {
+      orderID: order.customerorderid,
+      customerName: order.customername,
+      status: order.status,
+      totalAmount: order.totalamount
+    };
+    orderDetailsCache.set(orderID, orderDetails);
     orderStatusCache.set(orderID, status);
     
-    // return res.json({ orderID, status });
-    return res.json(result.recordset[0]);
+    return res.json(orderDetails);
   } catch (err) {
     console.error('Error fetching order status:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -312,25 +282,34 @@ app.post('/api/newOrder', async (req, res) => {
   }
 
   try {
-    const pool = await sql.connect(dbConfig);
-
     // Dohvati sve narucene obroke
-    const mealNames = meals.map(m => `'${m.name}'`).join(',');
-    const drinkNames = drinks.map(d => `'${d.name}'`).join(',');
+    let mealQuery = { rows: [] };
+    let drinkQuery = { rows: [] };
 
-    console.log("Ordered meals: ", mealNames);
-    console.log("Ordered drinks: ", drinkNames, "\n");
+    if (meals.length > 0) {
+      const mealNames = meals.map(m => m.name);
+      console.log("Ordered meals: ", mealNames);
+      
+      const placeholders = mealNames.map((_, index) => `$${index + 1}`).join(',');
+      mealQuery = await pool.query(
+        `SELECT * FROM meal WHERE LOWER(mealname) IN (${placeholders})`,
+        mealNames
+      );
+    }
 
-    const mealQuery = meals.length > 0
-      ? await pool.request().query(`SELECT * FROM meal WHERE LOWER(mealName) IN (${mealNames})`)
-      : { recordset: [] };
-
-    const drinkQuery = drinks.length > 0
-      ? await pool.request().query(`SELECT * FROM drink WHERE LOWER(drinkName) IN (${drinkNames})`)
-      : { recordset: [] };
+    if (drinks.length > 0) {
+      const drinkNames = drinks.map(d => d.name);
+      console.log("Ordered drinks: ", drinkNames, "\n");
+      
+      const placeholders = drinkNames.map((_, index) => `$${index + 1}`).join(',');
+      drinkQuery = await pool.query(
+        `SELECT * FROM drink WHERE LOWER(drinkname) IN (${placeholders})`,
+        drinkNames
+      );
+    }
 
     // Provjeri postoje li svi traženi proizvodi
-    if (mealQuery.recordset.length !== meals.length || drinkQuery.recordset.length !== drinks.length) {
+    if (mealQuery.rows.length !== meals.length || drinkQuery.rows.length !== drinks.length) {
       return res.status(400).json({ status: 'DENIED', reason: 'One or more products do not exist.' });
     }
 
@@ -340,7 +319,7 @@ app.post('/api/newOrder', async (req, res) => {
     const orderItems = [];
 
     for (const meal of meals) {
-      const dbMeal = mealQuery.recordset.find(m => m.mealName.toLowerCase() === meal.name.toLowerCase());
+      const dbMeal = mealQuery.rows.find(m => m.mealname.toLowerCase() === meal.name.toLowerCase());
       const quantity = meal.quantity;
       const subtotal = quantity * parseFloat(dbMeal.price);
       totalAmount += subtotal;
@@ -348,7 +327,7 @@ app.post('/api/newOrder', async (req, res) => {
 
       orderItems.push({
         itemType: 'meal',
-        itemID: dbMeal.mealID,
+        itemID: dbMeal.mealid,
         quantity,
         unitPrice: dbMeal.price,
         subtotal,
@@ -356,7 +335,7 @@ app.post('/api/newOrder', async (req, res) => {
     }
 
     for (const drink of drinks) {
-      const dbDrink = drinkQuery.recordset.find(d => d.drinkName.toLowerCase() === drink.name.toLowerCase());
+      const dbDrink = drinkQuery.rows.find(d => d.drinkname.toLowerCase() === drink.name.toLowerCase());
       const quantity = drink.quantity;
       const subtotal = quantity * parseFloat(dbDrink.price);
       totalAmount += subtotal;
@@ -364,7 +343,7 @@ app.post('/api/newOrder', async (req, res) => {
 
       orderItems.push({
         itemType: 'drink',
-        itemID: dbDrink.drinkID,
+        itemID: dbDrink.drinkid,
         quantity,
         unitPrice: dbDrink.price,
         subtotal,
@@ -372,51 +351,35 @@ app.post('/api/newOrder', async (req, res) => {
     }
 
     const totalDistinctItems = orderItems.length;
-    const prepTime = mealQuery.recordset.reduce((acc, m) => acc + m.mealPreparationTimeMinutes, 0);
+    const prepTime = mealQuery.rows.reduce((acc, m) => acc + m.mealpreparationtimeminutes, 0);
 
     // Kreiraj novu narudžbu
-    const insertOrderResult = await pool.request()
-      .input('customerName', sql.VarChar(100), customerName)
-      .input('status', sql.VarChar(20), 'pending')
-      .input('orderPreparationTimeMinutes', sql.Int, prepTime)
-      .input('totalItems', sql.Int, totalItems)
-      .input('totalDistinctItems', sql.Int, totalDistinctItems)
-      .input('totalAmount', sql.Decimal(10, 2), totalAmount)
-      .input('notes', sql.VarChar(255), notes)
-      .query(`
-        INSERT INTO customerOrder (
-          customerName, status, orderPreparationTimeMinutes,
-          totalItems, totalDistinctItems, totalAmount, notes
-        )
-        OUTPUT INSERTED.orderID
-        VALUES (@customerName, @status, @orderPreparationTimeMinutes, @totalItems, @totalDistinctItems, @totalAmount, @notes)
-      `);
+    const insertOrderResult = await pool.query(`
+      INSERT INTO customerorder (
+        customername, status, orderpreparationtimeminutes,
+        totalitems, totaldistinctitems, totalamount, notes
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING customerorderid
+    `, [customerName, 'pending', prepTime, totalItems, totalDistinctItems, totalAmount, notes]);
 
-    const orderID = insertOrderResult.recordset[0].orderID;
+    const orderID = insertOrderResult.rows[0].customerorderid;
 
     // Unesi orderItems
     for (const item of orderItems) {
-      await pool.request()
-        .input('orderID', sql.Int, orderID)
-        .input('itemType', sql.VarChar(10), item.itemType)
-        .input('itemID', sql.Int, item.itemID)
-        .input('quantity', sql.Int, item.quantity)
-        .input('unitPrice', sql.Decimal(10, 2), item.unitPrice)
-        .input('subtotal', sql.Decimal(10, 2), item.subtotal)
-        .input('notes', sql.VarChar(255), '')
-        .query(`
-          INSERT INTO orderItem (orderID, itemType, itemID, quantity, unitPrice, subtotal, notes)
-          VALUES (@orderID, @itemType, @itemID, @quantity, @unitPrice, @subtotal, @notes)
-        `);
+      await pool.query(`
+        INSERT INTO orderitem (customerorderid, itemtype, itemid, quantity, unitprice, subtotal, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [orderID, item.itemType, item.itemID, item.quantity, item.unitPrice, item.subtotal, '']);
     }
 
     // Izračunaj totalPrepTime
     let maxPrepTime = 0;
     for (const meal of meals) {
-      const dbMeal = mealQuery.recordset.find(m => m.mealName.toLowerCase() === meal.name.toLowerCase());
+      const dbMeal = mealQuery.rows.find(m => m.mealname.toLowerCase() === meal.name.toLowerCase());
       if (dbMeal) {
         const quantity = meal.quantity;
-        const prepTime = quantity * dbMeal.mealPreparationTimeMinutes;
+        const prepTime = quantity * dbMeal.mealpreparationtimeminutes;
         if (prepTime > maxPrepTime)
           maxPrepTime = prepTime;
       }
@@ -450,9 +413,10 @@ app.post('/api/newOrder', async (req, res) => {
 
 server.listen(PORT, async () => {
   try {
-    await sql.connect(dbConfig);
-    console.log('Povezano na SQL Server bazu.');
-    console.log(`Server pokrenut na http://localhost:${PORT}\n`);
+    // Test database connection
+    await pool.query('SELECT NOW()');
+    console.log('Povezano na PostgreSQL bazu.');
+    console.log(`Server pokrenut na portu ${PORT}\n`);
   } catch (err) {
     console.error('Greška prilikom spajanja na bazu:', err);
   }

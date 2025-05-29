@@ -45,11 +45,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     const mealsResponse = await fetch('/api/meals');
     const mealsData = await mealsResponse.json();
     menuItems.meals = mealsData;
+    console.log('Meals data:', mealsData); // Debug log
     
     // Fetch drinks
     const drinksResponse = await fetch('/api/drinks');
     const drinksData = await drinksResponse.json();
     menuItems.drinks = drinksData;
+    console.log('Drinks data:', drinksData); // Debug log
     
     // Render menu items
     renderMenu();
@@ -67,31 +69,31 @@ function renderMenu() {
   const mealsContainer = document.getElementById('meals-container');
   const drinksContainer = document.getElementById('drinks-container');
   
-  // Render meals
+  // Render meals - koristimo PostgreSQL nazive kolona (mala slova)
   mealsContainer.innerHTML = menuItems.meals.map(meal => `
-    <div class="menu-item" data-id="${meal.mealID}" data-type="meal">
+    <div class="menu-item" data-id="${meal.mealid}" data-type="meal">
       <div>
         <div class="item-name">
-          ${meal.mealName}
-          <div class="info-icon" data-item-type="meal" data-item-id="${meal.mealID}">i
+          ${meal.mealname}
+          <div class="info-icon" data-item-type="meal" data-item-id="${meal.mealid}">i
             <div class="tooltip">
-              <div class="tooltip-title">${meal.mealName}</div>
+              <div class="tooltip-title">${meal.mealname}</div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Opis:</span> ${meal.mealDescription || 'Nije dostupno'}
+                <span class="tooltip-label">Opis:</span> ${meal.mealdescription || 'Nije dostupno'}
               </div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Kategorija:</span> ${meal.mealCategory || 'Nije dostupno'}
+                <span class="tooltip-label">Kategorija:</span> ${meal.mealcategory || 'Nije dostupno'}
               </div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Alergeni:</span> ${meal.mealAllergens || 'Nema'}
+                <span class="tooltip-label">Alergeni:</span> ${meal.mealallergens || 'Nema'}
               </div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Vrijeme pripreme:</span> ${meal.mealPreparationTimeMinutes || '0'} min
+                <span class="tooltip-label">Vrijeme pripreme:</span> ${meal.mealpreparationtimeminutes || '0'} min
               </div>
             </div>
           </div>
         </div>
-        <div class="item-price">${meal.price.toFixed(2)} €</div>
+        <div class="item-price">${parseFloat(meal.price).toFixed(2)} €</div>
       </div>
       <div class="item-controls">
         <div class="quantity-control">
@@ -104,28 +106,28 @@ function renderMenu() {
     </div>
   `).join('');
   
-  // Render drinks
+  // Render drinks - koristimo PostgreSQL nazive kolona (mala slova)
   drinksContainer.innerHTML = menuItems.drinks.map(drink => `
-    <div class="menu-item" data-id="${drink.drinkID}" data-type="drink">
+    <div class="menu-item" data-id="${drink.drinkid}" data-type="drink">
       <div>
         <div class="item-name">
-          ${drink.drinkName}
-          <div class="info-icon" data-item-type="drink" data-item-id="${drink.drinkID}">i
+          ${drink.drinkname}
+          <div class="info-icon" data-item-type="drink" data-item-id="${drink.drinkid}">i
             <div class="tooltip">
-              <div class="tooltip-title">${drink.drinkName}</div>
+              <div class="tooltip-title">${drink.drinkname}</div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Opis:</span> ${drink.drinkDescription || 'Nije dostupno'}
+                <span class="tooltip-label">Opis:</span> ${drink.drinkdescription || 'Nije dostupno'}
               </div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Kategorija:</span> ${drink.drinkCategory || 'Nije dostupno'}
+                <span class="tooltip-label">Kategorija:</span> ${drink.drinkcategory || 'Nije dostupno'}
               </div>
               <div class="tooltip-section">
-                <span class="tooltip-label">Volumen:</span> ${drink.drinkVolume || 'Nije dostupno'}
+                <span class="tooltip-label">Volumen:</span> ${drink.drinkvolume || 'Nije dostupno'}
               </div>
             </div>
           </div>
         </div>
-        <div class="item-price">${drink.price.toFixed(2)} €</div>
+        <div class="item-price">${parseFloat(drink.price).toFixed(2)} €</div>
       </div>
       <div class="item-controls">
         <div class="quantity-control">
@@ -257,10 +259,10 @@ function addToCart(button, type) {
   // Reset quantity display to 1
   quantityDisplay.textContent = "1";
   
-  // Find the item in our menu data
+  // Find the item in our menu data - koristimo PostgreSQL nazive kolona
   const item = type === 'meal' 
-    ? menuItems.meals.find(meal => meal.mealID === id)
-    : menuItems.drinks.find(drink => drink.drinkID === id);
+    ? menuItems.meals.find(meal => meal.mealid === id)
+    : menuItems.drinks.find(drink => drink.drinkid === id);
   
   if (!item) return;
   
@@ -274,11 +276,11 @@ function addToCart(button, type) {
     // Update quantity if item exists
     cartArray[existingItemIndex].quantity += quantity;
   } else {
-    // Add new item to cart
+    // Add new item to cart - koristimo PostgreSQL nazive kolona
     cartArray.push({
       id: id,
-      name: type === 'meal' ? item.mealName : item.drinkName,
-      price: item.price,
+      name: type === 'meal' ? item.mealname : item.drinkname,
+      price: parseFloat(item.price),
       quantity: quantity
     });
   }
@@ -379,8 +381,8 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
   };
   
   try {
-    // Send order to server
-    const response = await fetch('http://localhost:3000/api/newOrder', {
+    // Send order to server - koristimo relativnu rutu umjesto localhost
+    const response = await fetch('/api/newOrder', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -396,7 +398,7 @@ document.getElementById('checkout-btn').addEventListener('click', async () => {
       document.getElementById('confirmation-view').style.display = 'block';
       document.getElementById('confirmation-order-id').textContent = result.orderID;
     } else {
-      alert(`Greška: ${result.message || 'Neuspješna narudžba'}`);
+      alert(`Greška: ${result.reason || 'Neuspješna narudžba'}`);
     }
   } catch (error) {
     console.error('Error placing order:', error);
@@ -425,7 +427,6 @@ function resetOrder() {
   updateCart();
 }
 
-// Handle status check form
 document.getElementById('status-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   
@@ -438,16 +439,29 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
 
   const statusResult = document.getElementById('status-result');
     
-    // Remove all status classes
-    statusResult.className = 'status-result';
+  // Remove all status classes
+  statusResult.className = 'status-result';
   
   try {
     // Fetch order status
     const response = await fetch(`/api/orderStatus/${orderID}`);
     const data = await response.json();
 
-    // Doing this, so that the code goes to the catch block if there was an error
-    let errorCheck = data.orderID;
+    // Check if the response indicates an error (404 or error property)
+    if (!response.ok || data.error) {
+      // Show error - order not found
+      document.getElementById('status-text').textContent = 'Nije pronađeno';
+      document.getElementById('status-order-id').textContent = orderID;
+      document.getElementById('status-customer').textContent = '-';
+      document.getElementById('status-details').textContent = 'Narudžba s navedenim brojem nije pronađena. Provjerite ispravnost broja narudžbe.';
+      
+      // Add not found class
+      statusResult.classList.add('not-found');
+      
+      // Show status result
+      statusResult.style.display = 'block';
+      return;
+    }
 
     let statusText = '';
     let statusClass = '';
@@ -481,7 +495,7 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
             statusClass = 'completed';
             break;
         default:
-            statusText = data.order.status;
+            statusText = data.status;
             statusClass = 'pending';
     }
 
@@ -495,16 +509,19 @@ document.getElementById('status-form').addEventListener('submit', async (e) => {
     // Show status result
     statusResult.style.display = 'block';
   } catch (error) {
-    // Show error
-    document.getElementById('status-text').textContent = 'Nije pronađeno';
+    // Show error for network issues or other unexpected errors
+    document.getElementById('status-text').textContent = 'Greška';
     document.getElementById('status-order-id').textContent = orderID;
     document.getElementById('status-customer').textContent = '-';
-    document.getElementById('status-details').textContent = 'Narudžba s navedenim brojem nije pronađena. Provjerite ispravnost broja narudžbe.';
+    document.getElementById('status-details').textContent = 'Dogodila se greška prilikom dohvaćanja statusa narudžbe. Molimo pokušajte ponovno.';
     
-    // Add not found class
+    // Add error class
     statusResult.classList.add('not-found');
-    // console.error('Error checking order status:', error);
-    // alert('Greška prilikom provjere statusa narudžbe. Pokušajte ponovno.');
+    
+    // Show status result
+    statusResult.style.display = 'block';
+    
+    console.error('Error fetching order status:', error);
   }
 });
 

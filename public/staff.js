@@ -89,9 +89,6 @@ function renderKitchenOrders() {
     card.className = 'order-card';
     card.id = `kitchen-order-${order.orderID}`;
     
-    // Calculate time passed (placeholder - would need actual timestamp from order)
-    const timePassed = Math.floor(Math.random() * 30); // Just a placeholder
-    
     // Generate HTML for order items
     let mealsHtml = '';
     if (order.meals && order.meals.length > 0) {
@@ -129,7 +126,6 @@ function renderKitchenOrders() {
     card.innerHTML = `
       <div class="order-header">
         <div class="order-id">Narudžba #${order.orderID}</div>
-        <div class="order-time">Prije ${timePassed} min</div>
       </div>
       <div class="order-customer">Kupac: ${order.customerName}</div>
       <ul class="order-items">
@@ -261,9 +257,6 @@ function renderDeliveryOrders() {
     card.className = 'order-card';
     card.id = `delivery-order-${order.orderID}`;
     
-    // Calculate time passed (placeholder - would need actual timestamp from order)
-    const timePassed = Math.floor(Math.random() * 30); // Just a placeholder
-    
     // Generate HTML for order items
     let mealsHtml = '';
     if (order.meals && order.meals.length > 0) {
@@ -292,7 +285,6 @@ function renderDeliveryOrders() {
     card.innerHTML = `
       <div class="order-header">
         <div class="order-id">Narudžba #${order.orderID}</div>
-        <div class="order-time">Prije ${timePassed} min</div>
       </div>
       <div class="order-customer">Kupac: ${order.customerName}</div>
       <ul class="order-items">
